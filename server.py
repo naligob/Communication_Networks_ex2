@@ -1,11 +1,19 @@
 import socket
+import time
+import sys
+import os
+import watchdog
+import string
+import random
 
+os.mkdir('./ServerData')
+
+port = sys.argv[1]
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-server.bind(('', 12345))
+server.bind(('', port))
 server.listen(5)
 
-socket.timeout(20)
+# socket.timeout(20)
 
 while True:
     client_socket, client_address = server.accept()
