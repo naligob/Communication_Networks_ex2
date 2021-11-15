@@ -96,6 +96,31 @@ def modifiedData(path, isFile, fileData='none'):
         addNewDir(path)
 
 
+def runCommands(client_socket, clientAbsolutePath):
+    commandOccru = False
+    while True:
+        command = str(client_socket.recv(1024),
+                      encoding='utf-8')
+        if not command:
+            break
+        commandOccru = True
+        while True:
+            data = str(client_socket.recv(1024), encoding='utf-8')
+            if not data:
+                break
+        clientPathByCommand = clientAbsolutePath + \
+            command.path  # need to get clean path
+        if command == 'delete':
+            delete(clientPathByCommand)
+        elif command == 'newFile':
+            addNewFile(clientPathByCommand, data)
+        elif command == 'newDir':
+            addNewDir(clientPathByCommand)
+        elif command == 'modified':
+            modifiedData(clientPathByCommand, command.isFile, data)
+    return commandOccru
+
+
 DATADIRNAME = './ServerData'
 SEPARATOR = "#"
 BUFFER = 1024
@@ -113,7 +138,7 @@ def main():
     while True:
         client_socket, client_address = server.accept()
         key = str(client_socket.recv(1024),
-                  encoding='utf-8')  # convert to string
+                  encoding='utf-8')
         userCase = identifyUser(key)  # 0 is new client 1 is well known
         if userCase != 1:
             clientID, clientsData = newClientReg(
@@ -128,30 +153,9 @@ def main():
                 sendAllFile(files, client_socket, clientAbsolutePath)
                 # dirsString = getAllDirFromPath(clientAbsolutePath)
                 # client_socket.send(f'{dirsString}'.encode())
-            # accept changes from client
-            # get command
-            while True:
-                command = str(client_socket.recv(1024),
-                              encoding='utf-8')
-                if not command:
-                    break
-                while True:
-                    data = str(client_socket.recv(1024), encoding='utf-8')
-                    if not data:
-                        break
-                # need to added client path to currect folder
-                clientPathByCommand = clientAbsolutePath + \
-                    command.path  # need to get clean path
-                if command == 'delete':
-                    delete(clientPathByCommand)
-                elif command == 'newFile':
-                    addNewFile(clientPathByCommand, data)
-                elif command == 'newDir':
-                    addNewDir(clientPathByCommand)
-                elif command == 'modified':
-                    modifiedData(clientPathByCommand, command.isFile, data)
-                # update last change
+            if runCommands(client_socket, clientAbsolutePath):  # true if have command
                 clientsData[key]['last_modified'] = client_address
+
         client_socket.close()
 
 
