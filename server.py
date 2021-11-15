@@ -4,6 +4,10 @@ import os
 import string
 import random
 
+DATADIRNAME = './ServerData'
+SEPARATOR = "#"
+BUFFER = 1024
+
 
 def identifyUser(data):
     return 1 if data != 'New User' else 0
@@ -121,17 +125,16 @@ def runCommands(client_socket, clientAbsolutePath):
     return commandOccru
 
 
-DATADIRNAME = './ServerData'
-SEPARATOR = "#"
-BUFFER = 1024
-
-
 def main():
     os.mkdir(DATADIRNAME)  # maybe need to check if exsits
     clientsData = {}
     port = sys.argv[1]
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(('', port))
+    try:
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind(('', int(port)))
+    except:
+        sys.exit()
+
     server.listen(5)
 
     clientsFilesCounter = 1
