@@ -11,44 +11,90 @@ def identifyUser(data):
     return 1 if data != 'New User' else 0
 
 
-def newClientReg(dataDirName, clientCount, client_address, clientsData):
+def newClientReg(clientsFilesCounter, client_address, clientsData):
     clientID = random.choices(
         string.ascii_lowercase + string.ascii_uppercase + string.digits, 128)
-    clientPath = dataDirName + str(clientCount)
+    clientPath = DATADIRNAME + str(clientsFilesCounter)
     os.mkdir(clientPath)
     clientSet = {client_address}
     clientsData[clientID] = {
-        'path': clientPath, 'last_modified': client_address, 'clientSet': clientSet}
-
+        'path': clientPath, 'last_modified': client_address, 'CS': clientSet}
     return clientID, clientsData
 
 
-# clients data dictionery {key=user_id , values: path ot file
-#                                                , addr of the last modifier client
-#                                                   , list of computers}
-dataDirName = './ServerData'
-os.mkdir(dataDirName)  # maybe need to check if exsits
+def sendAllDirFromPath(path, clientSocket):
+    allDirs = ''
+    for dirname, dirnames, filenames in os.walk(path):
+        for subdirname in dirnames:
+            p = dirname[len(path):]
+            allDirs += p + '\\'+subdirname + SEPARATOR
+    clientSocket.send(f'{allDirs}'.encode())
+
+
+def getAllDirFromPath(path):
+    allDirs = ''
+    for dirname, dirnames, filenames in os.walk(path):
+        for subdirname in dirnames:
+            p = dirname[len(path):]
+            allDirs += p + '\\'+subdirname + SEPARATOR
+    return allDirs
+
+
+def getAllFilesFromPath(path):  # need to send each file in send function
+    allFiles = set()
+    for dirname, dirnames, filenames in os.walk(path):
+        for filename in filenames:
+            p = dirname[len(path):]
+            allFiles.add(p + '\\'+filename)
+    return allFiles
+
+
+def updateCheck(key, client_address, clientsData):
+    if client_address in clientsData[key]['CS'] and client_address not in clientsData[key]['last_modified']:
+        return True
+    return False
+
+
+def sendAllFile(filesSet, client_socket, path):
+    for file in filesSet:
+        client_socket.send(f'{file}'.encode())
+        with open(path + file, 'rb') as f:
+            while True:
+                bytesRead = f.read(BUFFER)
+                if not bytesRead:
+                    break
+                client_socket.send(bytesRead)  # maybe send all
+
+
+DATADIRNAME = './ServerData'
+SEPARATOR = "#"
+BUFFER = 1024
+os.mkdir(DATADIRNAME)  # maybe need to check if exsits
 clientsData = {}
 port = sys.argv[1]
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(('', port))
 server.listen(5)
 
-clientCount = 1
+clientsFilesCounter = 1
 while True:
     client_socket, client_address = server.accept()
-    # print('Connection from: ', client_address)
-    data = str(client_socket.recv(1024), encoding='utf-8')  # convert to string
-    # print('Received: ', data)
-    userCase = identifyUser(data)  # 0 is new client 1 is well known
-    # need to generate new id, new client registration and new file to uploud
+    key = str(client_socket.recv(1024), encoding='utf-8')  # convert to string
+    userCase = identifyUser(key)  # 0 is new client 1 is well known
     if userCase != 1:
         clientID, clientsData = newClientReg(
-            dataDirName, clientCount, client_address, clientsData)
-        client_socket.send(bytes(clientID, 'utf-8'))
-        clientCount += 1
+            clientsFilesCounter, client_address, clientsData)
+        client_socket.send(f'{clientID}'.encode())
+        clientsFilesCounter += 1
+    else:
+        if updateCheck(key, client_address, clientsData):  # known user
+            clientAbsolutePath = clientsData[key]['path']
+            sendAllDirFromPath(clientAbsolutePath, client_socket)
+            files = getAllFilesFromPath(clientAbsolutePath)
+            sendAllFile(files, client_socket, clientAbsolutePath)
+            # dirsString = getAllDirFromPath(clientAbsolutePath)
+            # client_socket.send(f'{dirsString}'.encode())
 
-    # client_socket.send(data.upper())
     client_socket.close()
 
 # find client in dict
