@@ -1,8 +1,6 @@
 import socket
-import time
 import sys
 import os
-import watchdog
 import string
 import random
 
@@ -66,37 +64,96 @@ def sendAllFile(filesSet, client_socket, path):
                 client_socket.send(bytesRead)  # maybe send all
 
 
+def delete(path):
+    if os.path.isfile(path):
+        os.remove(path)
+    if os.path.isdir(path):
+        try:
+            os.rmdir(path)
+        except:
+            for root, dirs, files in os.walk(path, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+            os.rmdir(path)
+
+
+def addNewFile(filePath, data):
+    with open(filePath, 'wb') as f:
+        f.write(data)
+
+
+def addNewDir(dirPath):
+    os.mkdir(dirPath)
+
+
+def modifiedData(path, isFile, fileData='none'):
+    delete(path)
+    if isFile:
+        addNewFile(path, fileData)
+    else:
+        addNewDir(path)
+
+
 DATADIRNAME = './ServerData'
 SEPARATOR = "#"
 BUFFER = 1024
-os.mkdir(DATADIRNAME)  # maybe need to check if exsits
-clientsData = {}
-port = sys.argv[1]
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.bind(('', port))
-server.listen(5)
 
-clientsFilesCounter = 1
-while True:
-    client_socket, client_address = server.accept()
-    key = str(client_socket.recv(1024), encoding='utf-8')  # convert to string
-    userCase = identifyUser(key)  # 0 is new client 1 is well known
-    if userCase != 1:
-        clientID, clientsData = newClientReg(
-            clientsFilesCounter, client_address, clientsData)
-        client_socket.send(f'{clientID}'.encode())
-        clientsFilesCounter += 1
-    else:
-        if updateCheck(key, client_address, clientsData):  # known user
+
+def main():
+    os.mkdir(DATADIRNAME)  # maybe need to check if exsits
+    clientsData = {}
+    port = sys.argv[1]
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(('', port))
+    server.listen(5)
+
+    clientsFilesCounter = 1
+    while True:
+        client_socket, client_address = server.accept()
+        key = str(client_socket.recv(1024),
+                  encoding='utf-8')  # convert to string
+        userCase = identifyUser(key)  # 0 is new client 1 is well known
+        if userCase != 1:
+            clientID, clientsData = newClientReg(
+                clientsFilesCounter, client_address, clientsData)
+            client_socket.send(f'{clientID}'.encode())
+            clientsFilesCounter += 1
+        else:
             clientAbsolutePath = clientsData[key]['path']
-            sendAllDirFromPath(clientAbsolutePath, client_socket)
-            files = getAllFilesFromPath(clientAbsolutePath)
-            sendAllFile(files, client_socket, clientAbsolutePath)
-            # dirsString = getAllDirFromPath(clientAbsolutePath)
-            # client_socket.send(f'{dirsString}'.encode())
+            if updateCheck(key, client_address, clientsData):  # known user
+                sendAllDirFromPath(clientAbsolutePath, client_socket)
+                files = getAllFilesFromPath(clientAbsolutePath)
+                sendAllFile(files, client_socket, clientAbsolutePath)
+                # dirsString = getAllDirFromPath(clientAbsolutePath)
+                # client_socket.send(f'{dirsString}'.encode())
+            # accept changes from client
+            # get command
+            while True:
+                command = str(client_socket.recv(1024),
+                              encoding='utf-8')
+                if not command:
+                    break
+                while True:
+                    data = str(client_socket.recv(1024), encoding='utf-8')
+                    if not data:
+                        break
+                # need to added client path to currect folder
+                clientPathByCommand = clientAbsolutePath + \
+                    command.path  # need to get clean path
+                if command == 'delete':
+                    delete(clientPathByCommand)
+                elif command == 'newFile':
+                    addNewFile(clientPathByCommand, data)
+                elif command == 'newDir':
+                    addNewDir(clientPathByCommand)
+                elif command == 'modified':
+                    modifiedData(clientPathByCommand, command.isFile, data)
+                # update last change
+                clientsData[key]['last_modified'] = client_address
+        client_socket.close()
 
-    client_socket.close()
 
-# find client in dict
-# if client in clientsData[clientID]['clientSet']:
-#   make somthing...
+if __name__ == '__main__':
+    main()
