@@ -7,6 +7,8 @@ import random
 DATADIRNAME = './ServerData'
 SEPARATOR = "#"
 BUFFER = 1024
+YES = 'Y'
+NO = 'N'
 
 
 def identifyUser(data):
@@ -33,15 +35,6 @@ def sendAllDirFromPath(path, clientSocket):
     clientSocket.send(f'{allDirs}'.encode())
 
 
-def getAllDirFromPath(path):
-    allDirs = ''
-    for dirname, dirnames, filenames in os.walk(path):
-        for subdirname in dirnames:
-            p = dirname[len(path):]
-            allDirs += p + '\\'+subdirname + SEPARATOR
-    return allDirs
-
-
 def getAllFilesFromPath(path):  # need to send each file in send function
     allFiles = set()
     for dirname, dirnames, filenames in os.walk(path):
@@ -57,7 +50,8 @@ def updateCheck(key, client_address, clientsData):
     return False
 
 
-def sendAllFile(filesSet, client_socket, path):
+def sendAllFile(client_socket, path):
+    filesSet = getAllFilesFromPath(path)
     for file in filesSet:
         client_socket.send(f'{file}'.encode())
         with open(path + file, 'rb') as f:
@@ -83,45 +77,57 @@ def delete(path):
             os.rmdir(path)
 
 
-def addNewFile(filePath, data):
-    with open(filePath, 'wb') as f:
-        f.write(data)
+def creatAllDir(dirList, path):
+    for dir in dirList:
+        os.mkdir(path + dir)
 
 
-def addNewDir(dirPath):
-    os.mkdir(dirPath)
+def create(path, socket):
+    dirList = str(socket.recv(BUFFER), encoding='utf-8').split('#')
+    if len(dirList):
+        creatAllDir(dirList, path)
+    while True:
+        fileName = socket.recv(BUFFER).decode()
+        if not fileName:
+            break
+        with open(path+fileName, 'wb') as f:
+            while True:
+                data = socket.recv(BUFFER)
+                if not data:
+                    break
+                f.write(data)
 
 
-def modifiedData(path, isFile, fileData='none'):
+def modified(path, socket):
     delete(path)
-    if isFile:
-        addNewFile(path, fileData)
-    else:
-        addNewDir(path)
+    create(path, socket)
+
+
+def move(srcPath, destPath, socket):
+    delete(srcPath)
+    create(destPath, socket)
 
 
 def runCommands(client_socket, clientAbsolutePath):
     commandOccru = False
     while True:
         command = str(client_socket.recv(1024),
-                      encoding='utf-8')
+                      encoding='utf-8').split('#')
         if not command:
             break
         commandOccru = True
-        while True:
-            data = str(client_socket.recv(1024), encoding='utf-8')
-            if not data:
-                break
-        clientPathByCommand = clientAbsolutePath + \
-            command.path  # need to get clean path
-        if command == 'delete':
-            delete(clientPathByCommand)
-        elif command == 'newFile':
-            addNewFile(clientPathByCommand, data)
-        elif command == 'newDir':
-            addNewDir(clientPathByCommand)
-        elif command == 'modified':
-            modifiedData(clientPathByCommand, command.isFile, data)
+        cmdName = command[0]
+        # client location & command path
+        cmdSrcPath = clientAbsolutePath + command[1]
+        if cmdName == 'on_deleted':
+            delete(cmdSrcPath)
+        elif cmdName == 'on_created':
+            create(cmdSrcPath, client_socket)
+        elif cmdName == 'on_modified':
+            modified(cmdSrcPath, client_socket)
+        elif cmdName == 'on_moved':
+            cmdDestPath = clientAbsolutePath + command[2]
+            move(cmdSrcPath, cmdDestPath, client_socket)
     return commandOccru
 
 
@@ -146,18 +152,17 @@ def main():
         if userCase != 1:
             clientID, clientsData = newClientReg(
                 clientsFilesCounter, client_address, clientsData)
-            client_socket.send(f'{clientID}'.encode())
             clientsFilesCounter += 1
+
+        clientAbsolutePath = clientsData[key]['path']
+        if updateCheck(key, client_address, clientsData):  # known user
+            client_socket.send(f'{clientID}{SEPARATOR}{YES}'.encode())
+            sendAllDirFromPath(clientAbsolutePath, client_socket)
+            sendAllFile(client_socket, clientAbsolutePath)
         else:
-            clientAbsolutePath = clientsData[key]['path']
-            if updateCheck(key, client_address, clientsData):  # known user
-                sendAllDirFromPath(clientAbsolutePath, client_socket)
-                files = getAllFilesFromPath(clientAbsolutePath)
-                sendAllFile(files, client_socket, clientAbsolutePath)
-                # dirsString = getAllDirFromPath(clientAbsolutePath)
-                # client_socket.send(f'{dirsString}'.encode())
-            if runCommands(client_socket, clientAbsolutePath):  # true if have command
-                clientsData[key]['last_modified'] = client_address
+            client_socket.send(f'{clientID}{SEPARATOR}{NO}'.encode())
+        if runCommands(client_socket, clientAbsolutePath):  # true if have command
+            clientsData[key]['last_modified'] = client_address
 
         client_socket.close()
 
