@@ -139,15 +139,18 @@ def main():
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.bind(('', int(port)))
     except:
+        print("error")
         sys.exit()
 
     server.listen(5)
-
+    socket.setdefaulttimeout(15000)
     clientsFilesCounter = 1
     while True:
+        print('waiting for client...')
         client_socket, client_address = server.accept()
-        key = str(client_socket.recv(1024),
+        key = str(client_socket.recv(BUFFER),
                   encoding='utf-8')
+        print(f'client connected... from {client_address}')
         userCase = identifyUser(key)  # 0 is new client 1 is well known
         if userCase != 1:
             clientID, clientsData = newClientReg(
