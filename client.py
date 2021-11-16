@@ -35,7 +35,9 @@ def get_all_files_from_path(path):  # need to send each file in send function
 
 
 def send_all_files(filesSet, client_socket, path):
+    print(filesSet)
     for file in filesSet:
+        print(file)
         client_socket.send(f'{file}'.encode())
         with open(path + file, 'rb') as f:
             while True:
@@ -55,7 +57,7 @@ def send_all_dir_from_path(path, clientSocket):
 
 
 def creatAllDir(dirList, path):
-        for dir in dirList:
+        for dir in dirList[:-1]:
             os.mkdir(path + dir)
 
 
