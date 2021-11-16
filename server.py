@@ -6,7 +6,7 @@ import random
 
 DATADIRNAME = './ServerData'
 SEPARATOR = "#"
-BUFFER = 1024
+BUFFER = 4096
 YES = 'Y'
 NO = 'N'
 
@@ -20,8 +20,8 @@ def newClientReg(clientsFilesCounter, client_address, clientsData):
     clientID = ''.join(random.choices(
         string.ascii_lowercase + string.ascii_uppercase + string.digits, k=128))
     print('Client ID: ' + clientID)
-    clientPath = DATADIRNAME + str(clientsFilesCounter)
-    os.mkdir('\\'+clientPath)
+    clientPath = DATADIRNAME + '\\' + str(clientsFilesCounter)
+    os.mkdir(clientPath)
     clientSet = {client_address}
     clientsData[clientID] = {
         'path': clientPath, 'last_modified': client_address, 'CS': clientSet}
@@ -151,6 +151,7 @@ def main():
     while True:
         print('waiting for client...')
         client_socket, client_address = server.accept()
+        client_address = client_address[0]
         key = str(client_socket.recv(BUFFER),
                   encoding='utf-8')
         print(f'client connected... from {client_address}')
@@ -159,7 +160,8 @@ def main():
             clientID, clientsData = newClientReg(
                 clientsFilesCounter, client_address, clientsData)
             clientsFilesCounter += 1
-
+            key = clientID
+        print(clientsData)
         clientAbsolutePath = clientsData[key]['path']
         if updateCheck(key, client_address, clientsData):  # known user
             client_socket.send(f'{clientID}{SEPARATOR}{YES}'.encode())
