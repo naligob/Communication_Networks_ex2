@@ -10,19 +10,20 @@ SEPARATOR = "#"
 events_list = []
 
 def on_created(event):
-    events_list.append("on_created#" + str(event.src_path))
+    events_list.append("on_created#" + str(event.src_path).rpartition("/")[1])
 
 
 def on_deleted(event):
-    events_list.append("on_deleted#" + str(event.src_path))
+    events_list.append("on_deleted#" + str(event.src_path).rpartition("/")[1])
 
 
 def on_modified(event):
-    events_list.append("on_modified#" + str(event.src_path))
+    events_list.append("on_modified#" + str(event.src_path).rpartition("/")[1])
 
 
 def on_moved(event):
-    events_list.append("on_moved#" + str(event.src_path) + "#" + str(event.dest_path))
+    events_list.append("on_moved#" + str(event.src_path).rpartition("/")[1] + "#" +
+    str(event.dest_path).rpartition("/")[1])
 
 
 def get_all_files_from_path(path):  # need to send each file in send function
@@ -91,10 +92,10 @@ def delete(path):
 
 
 def main():
-    ip = sys.argv[1]
-    port = int(sys.argv[2])
-    file = sys.argv[3]
-    waiting_time = float(sys.argv[4])
+    ip = "127.0.0.1"
+    port = 3333
+    file = "data"
+    waiting_time = float(1)
     user_name = 'New User'
     if len(sys.argv) > 5:
         print(len(sys.argv))
