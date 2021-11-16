@@ -21,7 +21,7 @@ def newClientReg(clientsFilesCounter, client_address, clientsData):
         string.ascii_lowercase + string.ascii_uppercase + string.digits, k=128))
     print('Client ID: ' + clientID)
     clientPath = DATADIRNAME + str(clientsFilesCounter)
-    os.mkdir(clientPath)
+    os.mkdir('\\'+clientPath)
     clientSet = {client_address}
     clientsData[clientID] = {
         'path': clientPath, 'last_modified': client_address, 'CS': clientSet}
