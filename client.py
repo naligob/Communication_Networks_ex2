@@ -95,7 +95,7 @@ def main():
     port = int(sys.argv[2])
     file = sys.argv[3]
     waiting_time = float(sys.argv[4])
-    user_name = 'New user'
+    user_name = 'New User'
     if len(sys.argv) > 5:
         print(len(sys.argv))
         user_name = sys.argv[5]
@@ -107,20 +107,20 @@ def main():
     observer = Observer()
     observer.schedule(event_handler, file, recursive=True)
     observer.start()
-
+    flag = 0
     while True:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((ip, port))
         s.send(bytes(user_name, 'utf-8'))
         data = str(s.recv(BUFFER), encoding='utf-8')
-        user_name = data.rpartition("#")[0]
-        print(user_name + "#" + str(data).rpartition("#")[1])
-        if str(data).rpartition("#")[1] == 'Y':
+        user_name = data.split('#')[0]
+        print(user_name + "#" + str(data).split('#')[1])
+        if str(data).split('#')[1] == 'Y':
             delete(file)
             os.mkdir(file)
             create(file, s)
 
-        if len(sys.argv) < 5 and flag == 0:
+        if len(sys.argv) <= 5 and flag == 0:
             s.send(bytes("on_created#./", 'utf-8'))
             send_all_dir_from_path(file, s)
             send_all_files(get_all_files_from_path(file), s, file)
@@ -129,8 +129,8 @@ def main():
         else:
             for event in events_list:
                 s.send(bytes(event, 'utf-8'))
-                event_tipe = str(event).rpartition("#")[0]
-                event_path = str(event).rpartition("#")[1]
+                event_tipe = str(event).split('#')[0]
+                event_path = str(event).split('#')[1]
                 if event_tipe == "on_created":
                     send_all_dir_from_path(event_path, s)
                     send_all_files(get_all_files_from_path(event_path), s, event_path)
@@ -138,8 +138,8 @@ def main():
                     send_all_dir_from_path(event_path, s)
                     send_all_files(get_all_files_from_path(event_path), s, event_path)
                 if event_tipe == "on_moved":
-                    send_all_dir_from_path(event_path.rpartition("#")[1], s)
-                    send_all_files(get_all_files_from_path(event_path.rpartition("#")[1]), s, event_path.rpartition("#")[1])
+                    send_all_dir_from_path(event_path.split('#')[1], s)
+                    send_all_files(get_all_files_from_path(event_path.split('#')[1]), s, event_path.rpartition("#")[1])
                 events_list.remove(event)
 
         time.sleep(waiting_time)
