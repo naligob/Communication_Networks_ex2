@@ -95,7 +95,7 @@ def main():
     port = int(sys.argv[2])
     file = sys.argv[3]
     waiting_time = float(sys.argv[4])
-    user_name = ''
+    user_name = 'New user'
     if len(sys.argv) > 5:
         print(len(sys.argv))
         user_name = sys.argv[5]
@@ -107,25 +107,21 @@ def main():
     observer = Observer()
     observer.schedule(event_handler, file, recursive=True)
     observer.start()
-    flag = 0
 
     while True:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((ip, port))
-        if len(sys.argv) <= 5 and flag == 0:
-            s.send(bytes('New User', 'utf-8'))
-        else:
-            s.send(bytes(user_name, 'utf-8'))
-
-        data = str(s.recv(1024), encoding='utf-8')
-        user_name = str(data).rpartition("#")[0]
-        print(user_name)
+        s.send(bytes(user_name, 'utf-8'))
+        data = str(s.recv(BUFFER), encoding='utf-8')
+        user_name = data.rpartition("#")[0]
+        print(user_name + "#" + str(data).rpartition("#")[1])
         if str(data).rpartition("#")[1] == 'Y':
             delete(file)
             os.mkdir(file)
             create(file, s)
 
         if len(sys.argv) < 5 and flag == 0:
+            s.send(bytes("on_created#./", 'utf-8'))
             send_all_dir_from_path(file, s)
             send_all_files(get_all_files_from_path(file), s, file)
             flag = 1
