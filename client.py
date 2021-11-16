@@ -94,10 +94,9 @@ def main():
     ip = "127.0.0.1"
     port = 3333
     file = "data"
-    waiting_time = float(1)
+    waiting_time = float(5)
     user_name = 'New User'
     if len(sys.argv) > 5:
-        print(len(sys.argv))
         user_name = sys.argv[5]
     event_handler = LoggingEventHandler()
     event_handler.on_created = on_created
@@ -114,7 +113,6 @@ def main():
         s.send(bytes(user_name, 'utf-8'))
         data = str(s.recv(BUFFER), encoding='utf-8')
         user_name = data.split('#')[0]
-        print(user_name + "#" + str(data).split('#')[1])
         if str(data).split('#')[1] == 'Y':
             delete(file)
             os.mkdir(file)
