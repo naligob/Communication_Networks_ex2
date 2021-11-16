@@ -9,6 +9,7 @@ SEPARATOR = "#"
 BUFFER = 4096
 YES = 'Y'
 NO = 'N'
+NEWUSER = 'New User'
 
 
 def identifyUser(data):
@@ -16,10 +17,13 @@ def identifyUser(data):
 
 
 def newClientReg(clientsFilesCounter, client_address, clientsData):
-    print('NEW USER')
+    print()
+    print('you are a NEW USER!!')
+    print()
     clientID = ''.join(random.choices(
         string.ascii_lowercase + string.ascii_uppercase + string.digits, k=128))
-    print('Client ID: ' + clientID)
+    print('Ilan from the Server made you key: ' + clientID)
+    print()
     clientPath = DATADIRNAME + '\\' + str(clientsFilesCounter)
     os.mkdir(clientPath)
     clientSet = {client_address}
@@ -113,10 +117,11 @@ def move(srcPath, destPath, socket):
 def runCommands(client_socket, clientAbsolutePath):
     commandOccru = False
     while True:
-        command = str(client_socket.recv(1024),
-                      encoding='utf-8').split('#')
+        command = str(client_socket.recv(BUFFER),
+                      encoding='utf-8')
         if not command:
             break
+        command = command.split('#')
         commandOccru = True
         cmdName = command[0]
         # client location & command path
@@ -161,7 +166,6 @@ def main():
                 clientsFilesCounter, client_address, clientsData)
             clientsFilesCounter += 1
             key = clientID
-        print(clientsData)
         clientAbsolutePath = clientsData[key]['path']
         if updateCheck(key, client_address, clientsData):  # known user
             client_socket.send(f'{clientID}{SEPARATOR}{YES}'.encode())
