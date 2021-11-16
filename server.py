@@ -17,8 +17,8 @@ def identifyUser(data):
 
 def newClientReg(clientsFilesCounter, client_address, clientsData):
     print('NEW USER')
-    clientID = random.choices(
-        string.ascii_lowercase + string.ascii_uppercase + string.digits, 128)
+    clientID = ''.join(random.choices(
+        string.ascii_lowercase + string.ascii_uppercase + string.digits, k=128))
     print('Client ID: ' + clientID)
     clientPath = DATADIRNAME + str(clientsFilesCounter)
     os.mkdir(clientPath)
