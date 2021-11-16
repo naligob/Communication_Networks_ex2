@@ -9,8 +9,6 @@ BUFFER = 1024
 SEPARATOR = "#"
 events_list = []
 
-
-
 def on_created(event):
     events_list.append("on_created#" + str(event.src_path))
 
@@ -36,7 +34,7 @@ def get_all_files_from_path(path):  # need to send each file in send function
     return allFiles
 
 
-def sendAllFile(filesSet, client_socket, path):
+def send_all_files(filesSet, client_socket, path):
     for file in filesSet:
         client_socket.send(f'{file}'.encode())
         with open(path + file, 'rb') as f:
@@ -47,13 +45,14 @@ def sendAllFile(filesSet, client_socket, path):
                 client_socket.send(bytesRead)  # maybe send all
 
 
-def sendAllDirFromPath(path, clientSocket):
+def send_all_dir_from_path(path, clientSocket):
     allDirs = ''
     for dirname, dirnames, filenames in os.walk(path):
         for subdirname in dirnames:
             p = dirname[len(path):]
             allDirs += p + '\\' + subdirname + SEPARATOR
     clientSocket.send(f'{allDirs}'.encode())
+
 
 def creatAllDir(dirList, path):
         for dir in dirList:
@@ -92,15 +91,14 @@ def delete(path):
 
 
 def main():
-    ip, port = sys.argv[1], int(sys.argv[2])
+    ip = sys.argv[1]
+    port = int(sys.argv[2])
     file = sys.argv[3]
     waiting_time = float(sys.argv[4])
     user_name = ''
     if len(sys.argv) > 5:
         print(len(sys.argv))
         user_name = sys.argv[5]
-
-
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     event_handler = LoggingEventHandler()
     event_handler.on_created = on_created
@@ -127,8 +125,8 @@ def main():
             create(file, s)
 
         if len(sys.argv) < 5 and flag == 0:
-            sendAllDirFromPath(file, s)
-            sendAllFile(get_all_files_from_path(file), s, file)
+            send_all_dir_from_path(file, s)
+            send_all_files(get_all_files_from_path(file), s, file)
             flag = 1
 
         else:
@@ -137,23 +135,21 @@ def main():
                 event_tipe = str(event).rpartition("#")[0]
                 event_path = str(event).rpartition("#")[1]
                 if event_tipe == "on_created":
-                    sendAllDirFromPath(event_path, s)
-                    sendAllFile(get_all_files_from_path(event_path), s, event_path)
+                    send_all_dir_from_path(event_path, s)
+                    send_all_files(get_all_files_from_path(event_path), s, event_path)
                 if event_tipe == "on_modified":
-                    sendAllDirFromPath(event_path, s)
-                    sendAllFile(get_all_files_from_path(event_path), s, event_path)
+                    send_all_dir_from_path(event_path, s)
+                    send_all_files(get_all_files_from_path(event_path), s, event_path)
                 if event_tipe == "on_moved":
-                    sendAllDirFromPath(event_path.rpartition("#")[1], s)
-                    sendAllFile(get_all_files_from_path(event_path.rpartition("#")[1]), s, event_path.rpartition("#")[1])
+                    send_all_dir_from_path(event_path.rpartition("#")[1], s)
+                    send_all_files(get_all_files_from_path(event_path.rpartition("#")[1]), s, event_path.rpartition("#")[1])
                 events_list.remove(event)
 
         time.sleep(waiting_time)
 
-    my_observer.stop()
-    my_observer.join()
+    observer.stop()
+    observer.join()
     s.close()
-
-
 
 
 if __name__ == '__main__':
