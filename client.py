@@ -10,20 +10,19 @@ SEPARATOR = "#"
 events_list = []
 
 def on_created(event):
-    events_list.append("on_created#" + str(event.src_path).rpartition("/")[1])
+    events_list.append("on_created#" + str(event.src_path))
 
 
 def on_deleted(event):
-    events_list.append("on_deleted#" + str(event.src_path).rpartition("/")[1])
+    events_list.append("on_deleted#" + str(event.src_path))
 
 
 def on_modified(event):
-    events_list.append("on_modified#" + str(event.src_path).rpartition("/")[1])
+    events_list.append("on_modified#" + str(event.src_path))
 
 
 def on_moved(event):
-    events_list.append("on_moved#" + str(event.src_path).rpartition("/")[1] + "#" +
-    str(event.dest_path).rpartition("/")[1])
+    events_list.append("on_moved#" + str(event.src_path) + "#" + str(event.dest_path))
 
 
 def get_all_files_from_path(path):  # need to send each file in send function
@@ -122,7 +121,7 @@ def main():
             create(file, s)
 
         if len(sys.argv) <= 5 and flag == 0:
-            s.send(bytes("on_created#./", 'utf-8'))
+            s.send(bytes("on_created#", 'utf-8'))
             send_all_dir_from_path(file, s)
             send_all_files(get_all_files_from_path(file), s, file)
             flag = 1
