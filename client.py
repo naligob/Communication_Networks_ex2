@@ -99,7 +99,6 @@ def main():
     if len(sys.argv) > 5:
         print(len(sys.argv))
         user_name = sys.argv[5]
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     event_handler = LoggingEventHandler()
     event_handler.on_created = on_created
     event_handler.on_deleted = on_deleted
@@ -111,14 +110,16 @@ def main():
     flag = 0
 
     while True:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((ip, port))
-        if len(sys.argv) < 5 and flag == 0:
+        if len(sys.argv) <= 5 and flag == 0:
             s.send(bytes('New User', 'utf-8'))
         else:
             s.send(bytes(user_name, 'utf-8'))
 
         data = str(s.recv(1024), encoding='utf-8')
         user_name = str(data).rpartition("#")[0]
+        print(user_name)
         if str(data).rpartition("#")[1] == 'Y':
             delete(file)
             os.mkdir(file)
@@ -146,10 +147,11 @@ def main():
                 events_list.remove(event)
 
         time.sleep(waiting_time)
+        s.close()
 
     observer.stop()
     observer.join()
-    s.close()
+
 
 
 if __name__ == '__main__':
