@@ -16,8 +16,10 @@ def identifyUser(data):
 
 
 def newClientReg(clientsFilesCounter, client_address, clientsData):
+    print('NEW USER')
     clientID = random.choices(
         string.ascii_lowercase + string.ascii_uppercase + string.digits, 128)
+    print('Client ID: ' + clientID)
     clientPath = DATADIRNAME + str(clientsFilesCounter)
     os.mkdir(clientPath)
     clientSet = {client_address}
@@ -134,7 +136,8 @@ def runCommands(client_socket, clientAbsolutePath):
 def main():
     os.mkdir(DATADIRNAME)  # maybe need to check if exsits
     clientsData = {}
-    port = sys.argv[1]
+    port = 3333
+    # sys.argv[1]
     try:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.bind(('', int(port)))
