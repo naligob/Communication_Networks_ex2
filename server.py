@@ -33,7 +33,7 @@ def newClientReg(clientsFilesCounter, client_address, clientsData):
 
 
 def sendAllDirFromPath(path, clientSocket):
-    allDirs = ''
+    allDirs = ""
     for dirname, dirnames, filenames in os.walk(path):
         for subdirname in dirnames:
             p = dirname[len(path):]
@@ -84,12 +84,17 @@ def delete(path):
 
 
 def creatAllDir(dirList, path):
-    for dir in dirList:
+    for dir in dirList[:-1]:
         os.mkdir(path + dir)
 
 
 def create(path, socket):
+    print()
+    print(path)
     dirList = str(socket.recv(BUFFER), encoding='utf-8').split('#')
+    print()
+    print(dirList)
+    print()
     if len(dirList):
         creatAllDir(dirList, path)
     while True:
@@ -122,6 +127,7 @@ def runCommands(client_socket, clientAbsolutePath):
         if not command:
             break
         command = command.split('#')
+        print(command)
         commandOccru = True
         cmdName = command[0]
         # client location & command path
