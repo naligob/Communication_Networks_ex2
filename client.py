@@ -5,24 +5,26 @@ import os
 from watchdog.observers import Observer
 from watchdog.events import LoggingEventHandler
 
-BUFFER = 1024
+BUFFER = 4096
 SEPARATOR = "#"
 events_list = []
+file = "data"
 
 def on_created(event):
-    events_list.append("on_created#" + str(event.src_path))
+    events_list.append("on_created#" + str(event.src_path)[len(file):])
 
 
 def on_deleted(event):
-    events_list.append("on_deleted#" + str(event.src_path))
+    events_list.append("on_deleted#" + str(event.src_path)[len(file):])
 
 
 def on_modified(event):
-    events_list.append("on_modified#" + str(event.src_path))
+    events_list.append("on_modified#" + str(event.src_path)[len(file):])
 
 
 def on_moved(event):
-    events_list.append("on_moved#" + str(event.src_path) + "#" + str(event.dest_path))
+    events_list.append("on_moved#" + str(event.src_path)[len(file):] +
+                       "#" + str(event.dest_path)[len(file):])
 
 
 def get_all_files_from_path(path):  # need to send each file in send function
@@ -61,6 +63,7 @@ def send_all_dir_from_path(path, clientSocket):
 
 def creatAllDir(dirList, path):
         for dir in dirList[:-1]:
+
             os.mkdir(path + dir)
 
 
@@ -96,10 +99,9 @@ def delete(path):
 
 
 def main():
-    ip = "127.0.0.1"
-    port = 3333
-    file = "data"
-    waiting_time = float(5)
+    ip = "89.138.213.122" #"89.138.213.122"
+    port = 33333
+    waiting_time = float(10)
     user_name = 'New User'
     if len(sys.argv) > 5:
         user_name = sys.argv[5]
@@ -114,7 +116,9 @@ def main():
     flag = 0
     while True:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        print("socket is redy")
         s.connect((ip, port))
+        print("connected")
         s.send(bytes(user_name, 'utf-8'))
         data = str(s.recv(BUFFER), encoding='utf-8')
         user_name = data.split('#')[0]
@@ -125,6 +129,7 @@ def main():
 
         if len(sys.argv) <= 5 and flag == 0:
             s.send(bytes("on_created#", 'utf-8'))
+            print("on created")
             send_all_dir_from_path(file, s)
             send_all_files(get_all_files_from_path(file), s, file)
             flag = 1
@@ -145,8 +150,8 @@ def main():
                     send_all_files(get_all_files_from_path(event_path.split('#')[1]), s, event_path.rpartition("#")[1])
                 events_list.remove(event)
 
-        time.sleep(waiting_time)
         s.close()
+        time.sleep(waiting_time)
 
     observer.stop()
     observer.join()
