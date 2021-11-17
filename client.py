@@ -34,6 +34,8 @@ def get_all_files_from_path(path):  # need to send each file in send function
         for filename in filenames:
             p = dirname[len(path):]
             allFiles.add(p + '\\' + filename)
+    if os.path.isfile(path):
+        allFiles.add(path[len(file):])
     return allFiles
 
 
@@ -42,6 +44,7 @@ def send_all_files(filesSet, client_socket, path):
     for file in filesSet:
         all_files += SEPARATOR + file
     client_socket.send(f'{all_files}'.encode())
+    print(all_files)
     for file in filesSet:
         fileName = client_socket.recv(BUFFER).decode()
         with open(path + fileName, 'rb') as f:
@@ -61,6 +64,7 @@ def send_all_dir_from_path(path, clientSocket):
         clientSocket.send(b'EMPTY')
     else:
         clientSocket.send(f'{allDirs}'.encode())
+    print(allDirs)
 
 
 def creatAllDir(dirList, path):
@@ -144,12 +148,15 @@ def main():
                 event_tipe = str(event).split(SEPARATOR)[0]
                 event_path = str(event).split(SEPARATOR)[1]
                 if event_tipe == "on_created":
+                    print("on create  " + event_path)
                     send_all_dir_from_path(event_path, s)
                     send_all_files(get_all_files_from_path(event_path), s, event_path)
                 if event_tipe == "on_modified":
+                    print("on modified")
                     send_all_dir_from_path(event_path, s)
                     send_all_files(get_all_files_from_path(event_path), s, event_path)
                 if event_tipe == "on_moved":
+                    print("on moved")
                     send_all_dir_from_path(str(event).split(SEPARATOR)[2], s)
                     send_all_files(get_all_files_from_path(str(event).split(SEPARATOR)[2]), s, event_path.rpartition(SEPARATOR)[1])
                 events_list.remove(event)
