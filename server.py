@@ -10,6 +10,7 @@ BUFFER = 4096
 YES = 'Y'
 NO = 'N'
 NEWUSER = 'New User'
+EMPTY = "EMPTY"
 
 
 def identifyUser(data):
@@ -38,7 +39,10 @@ def sendAllDirFromPath(path, clientSocket):
         for subdirname in dirnames:
             p = dirname[len(path):]
             allDirs += p + '\\'+subdirname + SEPARATOR
-    clientSocket.send(f'{allDirs}'.encode())
+    if allDirs == '':
+        clientSocket.send(b'EMPTY')
+    else:
+        clientSocket.send(f'{allDirs}'.encode())
 
 
 def getAllFilesFromPath(path):  # need to send each file in send function
@@ -95,7 +99,7 @@ def create(path, socket):
     print()
     print(dirList)
     print()
-    if len(dirList):
+    if dirList[0] != EMPTY:
         creatAllDir(dirList, path)
     while True:
         fileName = socket.recv(BUFFER).decode()
