@@ -37,19 +37,18 @@ def get_all_files_from_path(path):  # need to send each file in send function
 
 
 def send_all_files(filesSet, client_socket, path):
-    print(filesSet)
     all_files = ''
     for file in filesSet:
         all_files += SEPARATOR + file
     client_socket.send(f'{all_files}'.encode())
     for file in filesSet:
-        fileName = socket.recv(BUFFER).decode()
-        f = open(fileName, 'rb')
-        while True:
-            bytesRead = f.read(BUFFER)
-            if not bytesRead:
-                break
-            client_socket.send(bytesRead)
+        fileName = client_socket.recv(BUFFER).decode()
+        with open(path + fileName, 'rb') as f:
+            while True:
+                bytesRead = f.read(BUFFER)
+                if len(bytesRead) == 0:
+                    break
+                client_socket.send(bytesRead)
 
 def send_all_dir_from_path(path, clientSocket):
     allDirs = ''
@@ -118,9 +117,7 @@ def main():
     flag = 0
     while True:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        print("socket is redy")
         s.connect((ip, port))
-        print("connected")
         s.send(bytes(user_name, 'utf-8'))
         data = str(s.recv(BUFFER), encoding='utf-8')
         user_name = data.split(SEPARATOR)[0]
