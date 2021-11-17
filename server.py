@@ -62,7 +62,7 @@ def sendAllFile(client_socket, path):
         with open(path + file, 'rb') as f:
             while True:
                 bytesRead = f.read(BUFFER)
-                if not bytesRead:
+                if bytesRead:
                     break
                 client_socket.send(bytesRead)  # maybe send all
 
@@ -88,50 +88,22 @@ def creatAllDir(dirList, path):
 
 
 def creatAllFiles(fileList, path, socket):
-    for file in fileList:
+    for file in fileList[1:]:
         socket.send(f'{file}'.encode())
         with open(path+file, 'wb') as f:
             while True:
                 data = socket.recv(BUFFER)
-                print()
-                print(f"the data in the file:{data} from client: " +
-                      str(data, encoding='utf-8'))
-                print()
-                if not data:
-                    break
                 f.write(data)
+                if len(data) < BUFFER:
+                    break
 
 
 def create(path, socket):
-    print()
-    # print(path)
     dirList = str(socket.recv(BUFFER), encoding='utf-8').split(SEPARATOR)
-    # print()
-    # print(dirList)
-    print()
     if dirList[0] != EMPTY:
         creatAllDir(dirList, path)
     fileList = str(socket.recv(BUFFER), encoding='utf-8').split(SEPARATOR)
-    print(fileList)
-    print()
     creatAllFiles(fileList, path, socket)
-    # while True:
-    #     fileName = socket.recv(BUFFER).decode()
-    #     print()
-    #     print('file: ', fileName)
-    #     print()
-    #     if not fileName:
-    #         break
-    #     with open(path+fileName, 'wb') as f:
-    #         while True:
-    #             data = socket.recv(BUFFER)
-    #             print()
-    #             print(f"the data in the file:{fileName} from client: " +
-    #                   str(data, encoding='utf-8'))
-    #             print()
-    #             if not data:
-    #                 break
-    #             f.write(data)
 
 
 def modified(path, socket):
@@ -156,6 +128,7 @@ def runCommands(client_socket, clientAbsolutePath):
         cmdName = command[0]
         # client location & command path
         cmdSrcPath = clientAbsolutePath + command[1]
+        print(cmdName)
         if cmdName == 'on_deleted':
             delete(cmdSrcPath)
         elif cmdName == 'on_created':
@@ -180,7 +153,6 @@ def main():
         sys.exit()
 
     server.listen(5)
-    # socket.setdefaulttimeout(15000)
     clientsFilesCounter = 1
     while True:
         print('waiting for client...')
