@@ -7,24 +7,25 @@ from watchdog.events import LoggingEventHandler
 
 BUFFER = 4096
 SEPARATOR = "**"
+EMPTY = "EMPTY"
 events_list = []
 file = "data"
 
 def on_created(event):
-    events_list.append("on_created**" + str(event.src_path))
+    events_list.append("on_created**" + str(event.src_path)[len(file):])
 
 
 def on_deleted(event):
-    events_list.append("on_deleted**" + str(event.src_path))
+    events_list.append("on_deleted**" + str(event.src_path)[len(file):])
 
 
 def on_modified(event):
-    events_list.append("on_modified**" + str(event.src_path))
+    events_list.append("on_modified**" + str(event.src_path)[len(file):])
 
 
 def on_moved(event):
-    events_list.append("on_moved**" + str(event.src_path) +
-                       "**" + str(event.dest_path))
+    events_list.append("on_moved**" + str(event.src_path)[len(file):] +
+                       "**" + str(event.dest_path)[len(file):])
 
 
 def get_all_files_from_path(path):  # need to send each file in send function
@@ -68,20 +69,25 @@ def creatAllDir(dirList, path):
             os.mkdir(path + dir)
 
 
-def create(path, socket):
-    dirList = str(socket.recv(BUFFER), encoding='utf-8').split(SEPARATOR)
-    if dirList[0] != 'EMPTY':
-        creatAllDir(dirList, path)
-    while True:
-        fileName = socket.recv(BUFFER).decode()
-        if not fileName:
-            break
-        with open(path+fileName, 'wb') as f:
+def creatAllFiles(fileList, path, socket):
+    for file in fileList[1:]:
+        print("file sent:" + file + str(len(fileList[1:])))
+        socket.send(f'{file}'.encode())
+        print("file sent:" + file)
+        with open(path+file, 'wb') as f:
             while True:
                 data = socket.recv(BUFFER)
-                if not data:
-                    break
                 f.write(data)
+                if len(data) < BUFFER:
+                    break
+
+
+def create(path, socket):
+    dirList = str(socket.recv(BUFFER), encoding='utf-8').split(SEPARATOR)
+    if dirList[0] != EMPTY:
+        creatAllDir(dirList, path)
+    fileList = str(socket.recv(BUFFER), encoding='utf-8').split(SEPARATOR)
+    creatAllFiles(fileList, path, socket)
 
 
 def delete(path):
@@ -128,7 +134,6 @@ def main():
 
         if len(sys.argv) <= 5 and flag == 0:
             s.send(bytes("on_created**", 'utf-8'))
-            print("on created")
             send_all_dir_from_path(file, s)
             send_all_files(get_all_files_from_path(file), s, file)
             flag = 1
@@ -145,8 +150,8 @@ def main():
                     send_all_dir_from_path(event_path, s)
                     send_all_files(get_all_files_from_path(event_path), s, event_path)
                 if event_tipe == "on_moved":
-                    send_all_dir_from_path(event_path.split(SEPARATOR)[1], s)
-                    send_all_files(get_all_files_from_path(event_path.split(SEPARATOR)[1]), s, event_path.rpartition("#")[1])
+                    send_all_dir_from_path(str(event).split(SEPARATOR)[2], s)
+                    send_all_files(get_all_files_from_path(str(event).split(SEPARATOR)[2]), s, event_path.rpartition(SEPARATOR)[1])
                 events_list.remove(event)
 
         s.close()
