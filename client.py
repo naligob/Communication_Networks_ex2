@@ -53,7 +53,10 @@ def send_all_dir_from_path(path, clientSocket):
         for subdirname in dirnames:
             p = dirname[len(path):]
             allDirs += p + '\\' + subdirname + SEPARATOR
-    clientSocket.send(f'{allDirs}'.encode())
+    if allDirs == '':
+        clientSocket.send(b'EMPTY')
+    else:
+        clientSocket.send(f'{allDirs}'.encode())
 
 
 def creatAllDir(dirList, path):
@@ -63,7 +66,7 @@ def creatAllDir(dirList, path):
 
 def create(path, socket):
     dirList = str(socket.recv(BUFFER), encoding='utf-8').split('#')
-    if len(dirList):
+    if dirList[0] != 'EMPTY':
         creatAllDir(dirList, path)
     while True:
         fileName = socket.recv(BUFFER).decode()
