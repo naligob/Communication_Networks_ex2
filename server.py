@@ -5,7 +5,7 @@ import string
 import random
 
 DATADIRNAME = './ServerData'
-SEPARATOR = "#"
+SEPARATOR = "**"
 BUFFER = 4096
 YES = 'Y'
 NO = 'N'
@@ -87,32 +87,51 @@ def creatAllDir(dirList, path):
         os.mkdir(path + dir)
 
 
-def create(path, socket):
-    print()
-    print(path)
-    dirList = str(socket.recv(BUFFER), encoding='utf-8').split('#')
-    print()
-    print(dirList)
-    print()
-    if dirList[0] != EMPTY:
-        creatAllDir(dirList, path)
-    while True:
-        fileName = socket.recv(BUFFER).decode()
-        print()
-        print('file: ', fileName)
-        print()
-        if not fileName:
-            break
-        with open(path+fileName, 'wb') as f:
+def creatAllFiles(fileList, path, socket):
+    for file in fileList:
+        socket.send(f'{file}'.encode())
+        with open(path+file, 'wb') as f:
             while True:
                 data = socket.recv(BUFFER)
                 print()
-                print(f"the data in the file:{fileName} from client: " +
+                print(f"the data in the file:{data} from client: " +
                       str(data, encoding='utf-8'))
                 print()
                 if not data:
                     break
                 f.write(data)
+
+
+def create(path, socket):
+    print()
+    # print(path)
+    dirList = str(socket.recv(BUFFER), encoding='utf-8').split(SEPARATOR)
+    # print()
+    # print(dirList)
+    print()
+    if dirList[0] != EMPTY:
+        creatAllDir(dirList, path)
+    fileList = str(socket.recv(BUFFER), encoding='utf-8').split(SEPARATOR)
+    print(fileList)
+    print()
+    creatAllFiles(fileList, path, socket)
+    # while True:
+    #     fileName = socket.recv(BUFFER).decode()
+    #     print()
+    #     print('file: ', fileName)
+    #     print()
+    #     if not fileName:
+    #         break
+    #     with open(path+fileName, 'wb') as f:
+    #         while True:
+    #             data = socket.recv(BUFFER)
+    #             print()
+    #             print(f"the data in the file:{fileName} from client: " +
+    #                   str(data, encoding='utf-8'))
+    #             print()
+    #             if not data:
+    #                 break
+    #             f.write(data)
 
 
 def modified(path, socket):
@@ -132,7 +151,7 @@ def runCommands(client_socket, clientAbsolutePath):
                       encoding='utf-8')
         if not command:
             break
-        command = command.split('#')
+        command = command.split(SEPARATOR)
         commandOccru = True
         cmdName = command[0]
         # client location & command path
