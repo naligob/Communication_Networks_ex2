@@ -18,13 +18,8 @@ def identifyUser(data):
 
 
 def newClientReg(clientsFilesCounter, client_address, clientsData):
-    print()
-    print('you are a NEW USER!!')
-    print()
     clientID = ''.join(random.choices(
         string.ascii_lowercase + string.ascii_uppercase + string.digits, k=128))
-    print('Ilan from the Server made you key: ' + clientID)
-    print()
     clientPath = DATADIRNAME + '\\' + str(clientsFilesCounter)
     os.mkdir(clientPath)
     clientSet = {client_address}
@@ -103,11 +98,18 @@ def create(path, socket):
         creatAllDir(dirList, path)
     while True:
         fileName = socket.recv(BUFFER).decode()
+        print()
+        print('file: ', fileName)
+        print()
         if not fileName:
             break
         with open(path+fileName, 'wb') as f:
             while True:
                 data = socket.recv(BUFFER)
+                print()
+                print(f"the data in the file:{fileName} from client: " +
+                      str(data, encoding='utf-8'))
+                print()
                 if not data:
                     break
                 f.write(data)
@@ -131,7 +133,6 @@ def runCommands(client_socket, clientAbsolutePath):
         if not command:
             break
         command = command.split('#')
-        print(command)
         commandOccru = True
         cmdName = command[0]
         # client location & command path
@@ -151,17 +152,16 @@ def runCommands(client_socket, clientAbsolutePath):
 def main():
     os.mkdir(DATADIRNAME)  # maybe need to check if exsits
     clientsData = {}
-    port = 3333
+    port = 33333
     # sys.argv[1]
     try:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.bind(('', int(port)))
     except:
-        print("error")
         sys.exit()
 
     server.listen(5)
-    socket.setdefaulttimeout(15000)
+    # socket.setdefaulttimeout(15000)
     clientsFilesCounter = 1
     while True:
         print('waiting for client...')
