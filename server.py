@@ -100,15 +100,21 @@ def creatAllFiles(fileList, path, socket):
 
 def create(path, socket):
     dirList = str(socket.recv(BUFFER), encoding='utf-8').split(SEPARATOR)
+    print('IN create')
+    print('create dir list: ')
+    print(dirList)
     if dirList[0] != EMPTY:
         creatAllDir(dirList, path)
     fileList = str(socket.recv(BUFFER), encoding='utf-8').split(SEPARATOR)
+    print('create file list: ')
+    print(fileList)
     creatAllFiles(fileList, path, socket)
 
 
 def modified(path, socket):
     delete(path)
     create(path, socket)
+    print('IN modified')
 
 
 def move(srcPath, destPath, socket):
@@ -128,10 +134,14 @@ def runCommands(client_socket, clientAbsolutePath):
         cmdName = command[0]
         # client location & command path
         cmdSrcPath = clientAbsolutePath + command[1]
-        print(cmdName)
+        print('Command Name: ' + cmdName)
+        print()
+        print('Command from client go to: ' + cmdSrcPath)
+        print()
         if cmdName == 'on_deleted':
             delete(cmdSrcPath)
         elif cmdName == 'on_created':
+
             create(cmdSrcPath, client_socket)
         elif cmdName == 'on_modified':
             modified(cmdSrcPath, client_socket)
