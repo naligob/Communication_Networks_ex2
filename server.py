@@ -6,7 +6,7 @@ import random
 
 DATADIRNAME = './ServerData'
 SEPARATOR = "**"
-BUFFER = 4096
+BUFFER = 100000
 YES = 'Y'
 NO = 'N'
 NEWUSER = 'New User'
@@ -64,10 +64,10 @@ def sendAllFile(client_socket, path):
                 bytesRead = f.read(BUFFER)
                 if bytesRead:
                     break
-                client_socket.send(bytesRead)  # maybe send all
+                client_socket.send(bytesRead)
 
 
-def delete(path):
+def delete(path, clientAbsolutePath):
     if os.path.isfile(path):
         os.remove(path)
     if os.path.isdir(path):
@@ -75,51 +75,65 @@ def delete(path):
             os.rmdir(path)
         except:
             for root, dirs, files in os.walk(path, topdown=False):
-                for name in files:
-                    os.remove(os.path.join(root, name))
-                for name in dirs:
-                    os.rmdir(os.path.join(root, name))
-            os.rmdir(path)
+                for fileName in files:
+                    os.remove(os.path.join(root, fileName))
+                for dirName in dirs:
+                    os.rmdir(os.path.join(root, dirName))
+            if path != clientAbsolutePath:
+                os.rmdir(path)
 
 
 def creatAllDir(dirList, path):
-    for dir in dirList[:-1]:
-        os.mkdir(path + dir)
+    for dir in dirList:
+        try:    # try new
+            os.mkdir(path + dir)  # old ver
+        except:  # new
+            x = 0   # new, what is x
 
 
 def creatAllFiles(fileList, path, socket):
-    for file in fileList[1:]:
-        socket.send(f'{file}'.encode())
-        with open(path+file, 'wb') as f:
-            while True:
-                data = socket.recv(BUFFER)
-                f.write(data)
-                if len(data) < BUFFER:
-                    break
+    for file in fileList:
+        socket.send(f'{file.split("??")[0]}'.encode())
+        if int(file.split("??")[1]) > 0:
+            with open(path+file.split("??")[0], 'wb') as f:
+                while True:
+                    data = socket.recv(BUFFER)
+                    f.write(data)
+                    if len(data) < BUFFER:
+                        break
+                    socket.send(f'{file.split("??")[0]}'.encode())
+        else:
+            with open(path + file.split("??")[0], 'wb') as f:
+                f.write(b'')
+    socket.send(f'ACK'.encode())
 
 
 def create(path, socket):
-    dirList = str(socket.recv(BUFFER), encoding='utf-8').split(SEPARATOR)
-    print('IN create')
-    print('create dir list: ')
-    print(dirList)
+    dirList = str(socket.recv(BUFFER),
+                  encoding='utf-8').split(SEPARATOR)
+    if dirList[0] == '':
+        dirList.pop(0)
+    socket.send(f'ACK'.encode())
     if dirList[0] != EMPTY:
         creatAllDir(dirList, path)
-    fileList = str(socket.recv(BUFFER), encoding='utf-8').split(SEPARATOR)
-    print('create file list: ')
-    print(fileList)
-    creatAllFiles(fileList, path, socket)
+    fileList = str(socket.recv(BUFFER), encoding='utf-8')
+    fileList = fileList.split(SEPARATOR)
+    if fileList[0] == '':
+        fileList.pop(0)
+    if fileList[0] == 'EMPTY':
+        socket.send(f'ACK'.encode())
+    else:
+        creatAllFiles(fileList, path, socket)
 
 
-def modified(path, socket):
-    delete(path)
-    create(path, socket)
-    print('IN modified')
+def modified(path, socket, clientAbsolutePath):
+    delete(path, clientAbsolutePath)
+    create(clientAbsolutePath, socket)
 
 
-def move(srcPath, destPath, socket):
-    delete(srcPath)
-    create(destPath, socket)
+def move(srcPath, destPath, socket, clientAbsolutePath):
+    delete(srcPath, clientAbsolutePath)
+    create(clientAbsolutePath, socket)
 
 
 def runCommands(client_socket, clientAbsolutePath):
@@ -127,27 +141,23 @@ def runCommands(client_socket, clientAbsolutePath):
     while True:
         command = str(client_socket.recv(BUFFER),
                       encoding='utf-8')
+        client_socket.send(f'ACK'.encode())
         if not command:
             break
-        command = command.split(SEPARATOR)
-        commandOccru = True
-        cmdName = command[0]
-        # client location & command path
-        cmdSrcPath = clientAbsolutePath + command[1]
-        print('Command Name: ' + cmdName)
-        print()
-        print('Command from client go to: ' + cmdSrcPath)
-        print()
-        if cmdName == 'on_deleted':
-            delete(cmdSrcPath)
-        elif cmdName == 'on_created':
-
-            create(cmdSrcPath, client_socket)
-        elif cmdName == 'on_modified':
-            modified(cmdSrcPath, client_socket)
-        elif cmdName == 'on_moved':
-            cmdDestPath = clientAbsolutePath + command[2]
-            move(cmdSrcPath, cmdDestPath, client_socket)
+        if command != 'EMPTY':
+            command = command.split(SEPARATOR)
+            commandOccru = True
+            cmdName = command[0]
+            cmdSrcPath = clientAbsolutePath + command[1]
+            if cmdName == 'on_deleted':
+                delete(cmdSrcPath, clientAbsolutePath)
+            elif cmdName == 'on_created':
+                create(clientAbsolutePath, client_socket)
+            elif cmdName == 'on_modified':
+                modified(cmdSrcPath, client_socket, clientAbsolutePath)
+            elif cmdName == 'on_moved':
+                cmdDestPath = clientAbsolutePath + command[2]
+                move(cmdSrcPath, cmdDestPath, client_socket, clientAbsolutePath)
     return commandOccru
 
 
@@ -165,18 +175,17 @@ def main():
     server.listen(5)
     clientsFilesCounter = 1
     while True:
-        print('waiting for client...')
         client_socket, client_address = server.accept()
         client_address = client_address[0]
         key = str(client_socket.recv(BUFFER),
                   encoding='utf-8')
-        print(f'client connected... from {client_address}')
         userCase = identifyUser(key)  # 0 is new client 1 is well known
         if userCase != 1:
             clientID, clientsData = newClientReg(
                 clientsFilesCounter, client_address, clientsData)
             clientsFilesCounter += 1
             key = clientID
+            print(f'client key: {key}')
         clientAbsolutePath = clientsData[key]['path']
         if updateCheck(key, client_address, clientsData):  # known user
             client_socket.send(f'{clientID}{SEPARATOR}{YES}'.encode())
