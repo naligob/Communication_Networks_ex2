@@ -18,26 +18,30 @@ def identifyUser(data):
 
 
 def newClientReg(clientsFilesCounter, client_address, clientsData):
-    clientID = ''.join(random.choices(
+    clientKey = ''.join(random.choices(
         string.ascii_lowercase + string.ascii_uppercase + string.digits, k=128))
-    clientPath = DATADIRNAME + '\\' + str(clientsFilesCounter)
+    clientPath = DATADIRNAME + '/' + str(clientsFilesCounter)
     os.mkdir(clientPath)
     clientSet = {client_address}
-    clientsData[clientID] = {
-        'path': clientPath, 'last_modified': client_address, 'CS': clientSet}
-    return clientID, clientsData
+    utdList = {client_address}
+    clientsData[clientKey] = {
+        'path': clientPath, 'up_to_date': utdList, 'CS': clientSet}
+    return clientKey, clientsData
 
 
 def sendAllDirFromPath(path, clientSocket):
-    allDirs = ""
+    allDirs = ''
+    # if os.path.isdir(path):
+    #     allDirs += path[len(DATADIRNAME):]
     for dirname, dirnames, filenames in os.walk(path):
         for subdirname in dirnames:
             p = dirname[len(path):]
-            allDirs += p + '\\'+subdirname + SEPARATOR
+            allDirs += SEPARATOR + p + '/' + subdirname
     if allDirs == '':
-        clientSocket.send(b'EMPTY')
+        clientSocket.send(b'EMPTY**')
     else:
         clientSocket.send(f'{allDirs}'.encode())
+    ack = clientSocket.recv(BUFFER)
 
 
 def getAllFilesFromPath(path):  # need to send each file in send function
@@ -45,26 +49,44 @@ def getAllFilesFromPath(path):  # need to send each file in send function
     for dirname, dirnames, filenames in os.walk(path):
         for filename in filenames:
             p = dirname[len(path):]
-            allFiles.add(p + '\\'+filename)
+            allFiles.add(p + '/' + filename)
+    if os.path.isfile(path):
+        allFiles.add(path[len(DATADIRNAME):])
     return allFiles
 
 
 def updateCheck(key, client_address, clientsData):
-    if client_address in clientsData[key]['CS'] and client_address not in clientsData[key]['last_modified']:
-        return True
+    if client_address in clientsData[key]['CS']:
+        if client_address not in clientsData[key]['up_to_date']:
+            print('True')
+            clientsData[key]['up_to_date'].add(client_address)
+            return True
     return False
 
 
-def sendAllFile(client_socket, path):
-    filesSet = getAllFilesFromPath(path)
+def sendAllFile(filesSet, client_socket, path):
+    all_files = ''
     for file in filesSet:
-        client_socket.send(f'{file}'.encode())
         with open(path + file, 'rb') as f:
+            all_files += SEPARATOR + file + \
+                "??" + str(len(f.read(BUFFER)))
+    if all_files == '':
+        client_socket.send(f'EMPTY'.encode())
+    else:
+        client_socket.send(f'{all_files}'.encode())
+    for file in filesSet:
+        fileName = client_socket.recv(BUFFER).decode()
+        with open(path + fileName, 'rb') as f:
             while True:
                 bytesRead = f.read(BUFFER)
-                if bytesRead:
+                if len(bytesRead) == 0:
                     break
                 client_socket.send(bytesRead)
+                if len(bytesRead) < BUFFER:
+                    break
+                fileName = client_socket.recv(BUFFER).decode()
+
+    ack = client_socket.recv(BUFFER)
 
 
 def delete(path, clientAbsolutePath):
@@ -148,6 +170,7 @@ def runCommands(client_socket, clientAbsolutePath):
             command = command.split(SEPARATOR)
             commandOccru = True
             cmdName = command[0]
+            print(cmdName)
             cmdSrcPath = clientAbsolutePath + command[1]
             if cmdName == 'on_deleted':
                 delete(cmdSrcPath, clientAbsolutePath)
@@ -161,11 +184,20 @@ def runCommands(client_socket, clientAbsolutePath):
     return commandOccru
 
 
+def makeLocalClient(clientsData):
+    key = 'RlrVBr0VZk3VIx2YZJfW6L3H5QN7DFkt9dTXlPVAmGuTp2cwweCTiz5Aw6gPJtkZ5pYtpxoSVgNA5cTQdk63Yxq4Ka3RmyzLFnMfROaPtLnIlBGJgXh1TmBQrpNaTfDx'
+    clientSet = {'10.0.2.4'}
+    utdList = {'10.0.2.4'}
+    clientsData[key] = {
+        'path': DATADIRNAME + '/1', 'up_to_date': utdList, 'CS': clientSet}
+    return clientsData
+
+
 def main():
-    os.mkdir(DATADIRNAME)  # maybe need to check if exsits
+    # os.mkdir(DATADIRNAME)  # maybe need to check if exsits
     clientsData = {}
-    port = 33333
-    # sys.argv[1]
+    clientsData = makeLocalClient(clientsData)
+    port = int(sys.argv[1])
     try:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.bind(('', int(port)))
@@ -180,21 +212,38 @@ def main():
         key = str(client_socket.recv(BUFFER),
                   encoding='utf-8')
         userCase = identifyUser(key)  # 0 is new client 1 is well known
-        if userCase != 1:
+        print(f'client: {client_address}')
+        if userCase == 0:
             clientID, clientsData = newClientReg(
                 clientsFilesCounter, client_address, clientsData)
             clientsFilesCounter += 1
             key = clientID
             print(f'client key: {key}')
+        else:
+            clientsData[key]['CS'].add(client_address)
         clientAbsolutePath = clientsData[key]['path']
         if updateCheck(key, client_address, clientsData):  # known user
-            client_socket.send(f'{clientID}{SEPARATOR}{YES}'.encode())
+            print('known user!!')
+            print(client_address)
+            client_socket.send(f'{key}{SEPARATOR}{YES}'.encode())
             sendAllDirFromPath(clientAbsolutePath, client_socket)
-            sendAllFile(client_socket, clientAbsolutePath)
+            sendAllFile(getAllFilesFromPath(clientAbsolutePath),
+                        client_socket, clientAbsolutePath)
+            print('updated!!')
         else:
-            client_socket.send(f'{clientID}{SEPARATOR}{NO}'.encode())
+            client_socket.send(f'{key}{SEPARATOR}{NO}'.encode())
         if runCommands(client_socket, clientAbsolutePath):  # true if have command
-            clientsData[key]['last_modified'] = client_address
+            print('entered last_modified')
+            newutdList = {client_address}
+            print('before update:')
+            print(clientsData)
+            print()
+            clientsData[key]['up_to_date'] = newutdList
+            print('after update:')
+            print(clientsData)
+            print()
+        else:
+            print('skip last modifid')
 
         client_socket.close()
 
