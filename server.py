@@ -170,7 +170,7 @@ def runCommands(client_socket, clientAbsolutePath):
             command = command.split(SEPARATOR)
             commandOccru = True
             cmdName = command[0]
-            print(cmdName)
+            # print(cmdName)
             cmdSrcPath = clientAbsolutePath + command[1]
             if cmdName == 'on_deleted':
                 delete(cmdSrcPath, clientAbsolutePath)
@@ -196,7 +196,7 @@ def makeLocalClient(clientsData):
 def main():
     # os.mkdir(DATADIRNAME)  # maybe need to check if exsits
     clientsData = {}
-    clientsData = makeLocalClient(clientsData)
+    # clientsData = makeLocalClient(clientsData)
     port = int(sys.argv[1])
     try:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -223,25 +223,25 @@ def main():
             clientsData[key]['CS'].add(client_address)
         clientAbsolutePath = clientsData[key]['path']
         if updateCheck(key, client_address, clientsData):  # known user
-            print('known user!!')
-            print(client_address)
+            # print('known user!!')
+            # print(client_address)
             client_socket.send(f'{key}{SEPARATOR}{YES}'.encode())
             sendAllDirFromPath(clientAbsolutePath, client_socket)
             sendAllFile(getAllFilesFromPath(clientAbsolutePath),
                         client_socket, clientAbsolutePath)
-            print('updated!!')
+            # print('updated!!')
         else:
             client_socket.send(f'{key}{SEPARATOR}{NO}'.encode())
         if runCommands(client_socket, clientAbsolutePath):  # true if have command
-            print('entered last_modified')
+            # print('entered last_modified')
             newutdList = {client_address}
-            print('before update:')
-            print(clientsData)
-            print()
+            # print('before update:')
+            # print(clientsData)
+            # print()
             clientsData[key]['up_to_date'] = newutdList
-            print('after update:')
-            print(clientsData)
-            print()
+            # print('after update:')
+            # print(clientsData)
+            # print()
         else:
             print('skip last modifid')
 

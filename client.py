@@ -158,14 +158,13 @@ def main():
     event_handler.on_modified = on_modified
     event_handler.on_moved = on_moved
     observer = Observer()
+    observer.schedule(event_handler, file, recursive=True)
+    observer.start()
     waiting_time = int(sys.argv[4])
     user_name = 'New User'
     if len(sys.argv) > 5:
         user_name = sys.argv[5]
-    # observer.start()
     flag = 0
-    firstRound = True
-
     while True:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((ip, port))
@@ -173,26 +172,21 @@ def main():
         data = str(s.recv(BUFFER), encoding='utf-8')
         user_name = data.split(SEPARATOR)[0]
         if str(data).split(SEPARATOR)[1] == 'Y':
-            print('rigth data making copy!')
+            # print('rigth data making copy!')
             delete(file)
-            print('after delete')
+            # print('after delete')
             os.mkdir(file)
             create(file, s)
-            observer.schedule(event_handler, file, recursive=True)
-            observer.start()
-            firstRound = False
+            # print(f'len of events after update: {len(events_list)}')
+            events_list.clear()  # all events deleted!
         if len(sys.argv) <= 5 and flag == 0:
             s.send(bytes("on_created**", 'utf-8'))
             ack = s.recv(BUFFER)
             send_all_dir_from_path(file, s)
             send_all_files(get_all_files_from_path(file), s, file)
             flag = 1
-        if firstRound:
-            observer.schedule(event_handler, file, recursive=True)
-            observer.start()
-            firstRound = False
-        print('events_list length: ')
-        print(len(events_list))
+        # print('events_list length: ')
+        # print(len(events_list))
         for event in events_list:
             print(event)
             s.send(bytes(event, 'utf-8'))
